@@ -1,7 +1,7 @@
 import dash
 from dash import Dash, html, dcc, callback, Output, Input, dash_table
 from dash import Dash, html, dcc, dash_table
-
+import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.subplots as sp
 
@@ -106,110 +106,6 @@ result_100_200 = result_100_200[[
 ]]
 
 
-# filtered_result_overall = result_overall[result_overall['spray_batch_id'] == 38]
-# filtered_result_100_200 = result_100_200[result_100_200['spray_batch_id'] == 38]
-
-
-# # Select the columns of interest
-# columns_of_interest = [
-#     'dust_mark', 'fibre_mark', 'paint_marks', 'white_marks', 'sink_marks', 
-#     'texture_marks', 'water_marks', 'flow_marks', 'black_dot', 'white_dot', 
-#     'over_paint', 'under_spray', 'colour_out', 'masking_ng', 'flying_paint', 
-#     'weldline', 'banding', 'short_mould', 'sliver_streak', 'dented', 'scratches', 
-#     'dirty', 'print_defects'
-# ]
-
-# valid_columns = [col for col in columns_of_interest if col in filtered_result_overall.columns]
-# # print("Valid Columns: ", valid_columns)
-
-# # Filter the data to only keep rows where any value in the selected columns is non-zero and not NaN
-# subset_df = filtered_result_overall.loc[:, valid_columns]  # Select only valid columns
-
-# # Further filter to exclude rows where all values in selected columns are either 0 or NaN
-# subset_df = subset_df.loc[(subset_df != 0).any(axis=1) & subset_df.notna().any(axis=1)]
-
-# # Check if subset_df has data after filtering
-# # print(subset_df.head())  # Show first few rows of the filtered DataFrame
-
-# # Sum the values for each defect type (columns in valid_columns)
-# column_sums = subset_df.sum()
-
-# # Check if any of the sums are NaN or zero
-# # Filter out columns where the sum is 0 or NaN
-# filtered_column_sums = column_sums[column_sums > 0]
-
-# # Always include the overall rejection distribution
-# overall_column_sums = subset_df.sum()
-# filtered_overall_column_sums = overall_column_sums[overall_column_sums > 0]
-
-# # Create the main subplot structure
-# num_subplots = 1  # Start with 1 for the overall chart
-# if not filtered_result_100_200.empty:
-#     num_subplots += len(filtered_result_100_200)
-
-# fig = sp.make_subplots(
-#     rows=num_subplots,
-#     cols=1,
-#     subplot_titles=["Overall Defect Distribution"] + [
-#         f"Defect Distribution for Spray Batch ID {row['spray_batch_id']} ({row['movement_reason']}% Check)"
-#         for _, row in filtered_result_100_200.iterrows() if row['movement_reason'] in ['100', '200']
-#     ],
-#     specs=[[{'type': 'domain'}] for _ in range(num_subplots)]
-# )
-
-
-# # Add the overall defect distribution pie chart
-# fig.add_pie(
-#     labels=filtered_overall_column_sums.index,
-#     values=filtered_overall_column_sums.values,
-#     name="Overall Defects",
-#     row=1,
-#     col=1
-# )
-
-# # Add pie charts for 100% and 200% checks if they exist
-# if not filtered_result_100_200.empty:
-#     for i, (_, row) in enumerate(filtered_result_100_200.iterrows()):
-#         # Check if the movement_reason is 100 or 200
-#         if row['movement_reason'] in ['100', '200']:
-#             # Filter columns of interest that have values greater than 0
-#             filtered_row = row[columns_of_interest][row[columns_of_interest] > 0]
-            
-#             # Add pie chart for this row
-#             fig.add_pie(
-#                 labels=filtered_row.index,
-#                 values=filtered_row.values,
-#                 name=f"Batch {row['spray_batch_id']} ({row['movement_reason']}%)",
-#                 row=i + 2,  # Start from the second row (row 1 is overall)
-#                 col=1
-#             )
-
-
-# # Update layout
-# fig.update_layout(
-#     title="Defect Distribution Overview",
-#     showlegend=True  # Show the legend for better interpretation
-# )
-
-# df2 = pd.read_sql('SELECT * FROM spray_batch_info', con=db_connection)
-
-# # Convert the date_sprayed column to datetime format
-# df2['date_sprayed'] = pd.to_datetime(df2['date_sprayed'], format='%Y-%m-%d')
-
-# # Define the date range
-# start_date = '2024-11-01'
-# end_date = '2024-11-13'
-
-# # Filter the data based on the date range
-# filtered_df2 = df2[(df2['date_sprayed'] >= start_date) & (df2['date_sprayed'] <= end_date)]
-
-# # Remove columns that are completely 0 or NaN in the filtered DataFrame
-# filtered_df2 = filtered_df2.loc[:, (filtered_df2 != 0).any(axis=0) & filtered_df2.notna().any(axis=0)]
-
-# # Display the filtered DataFrame
-# # print(filtered_df2)
-
-
 
 """
 so when the user picks a part and a date range 
@@ -237,41 +133,77 @@ a graph and table will also be shown right beside the table itself (same as the 
 ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-layout = html.Div([
+layout = dbc.Container(
+    [
+        # Dropdown for part selection
+        dbc.Row(
+            dbc.Col(
+                dcc.Dropdown(
+                    id='dd1',
+                    options=[],
+                    placeholder="Select Parts....",
+                ),
+                width=6,  # Center with a width of 6 out of 12
+                className="mt-3 mb-3"  # Add top and bottom margin
+            )
+        ),
 
-    dcc.Dropdown(
-        id='dd1',
-        options=[],
-        placeholder="Select Parts...."
-    ),
+        # Date picker
+        dbc.Row(
+            dbc.Col(
+                html.Div(
+                    dcc.DatePickerRange(id='date_range'),
+                    className="d-flex justify-content-left"  # Center the DatePickerRange
+                ),
+                width=6,
+                className="mt-3 mb-3"
+            )
+        ),
 
-    # Date Picker Range
-    html.Div(dcc.DatePickerRange(id='date_range')),
+        # AgGrid Table
+        dbc.Row(
+            dbc.Col(
+                dag.AgGrid(
+                    id='grid',
+                    rowData=result_overall.to_dict('records'),
+                    dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
+                    columnDefs=[{"field": i} for i in result_overall.columns],
+                    selectedRows=[],
+                    style={'height': '400px', 'width': '100%'}  # Adjust height and width
+                ),
+                width=12,
+                className="mb-4"
+            )
+        ),
 
-    # AgGrid for displaying result_overall data
-    dag.AgGrid(
-        id='grid',
-        rowData=result_overall.to_dict('records'),
-        dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
-        columnDefs=[{"field": i} for i in result_overall.columns],
-        selectedRows=[],
-    ),
+        # Pie chart
+        dbc.Row(
+            dbc.Col(
+                dcc.Graph(
+                    id='pie',
+                    figure=go.Figure()
+                ),
+                width=6,
+                className="mb-4"  # Add spacing below the chart
+            ),
+            justify="left"  # Center the chart
+        ),
 
-    # Pie chart
-    dcc.Graph(
-        id='pie',
-        figure=go.Figure()
-    ),
-
-    # Defect data table
-    dash_table.DataTable(
-        id='defect_table',
-        data=[]
-    )
-
-
-
-])
+        # Defect data table
+        dbc.Row(
+            dbc.Col(
+                dash_table.DataTable(
+                    id='defect_table',
+                    data=[],
+                    style_table={'width': '100%', 'overflowX': 'auto'},  # Responsive table
+                ),
+                width=12,
+                className="mb-4"
+            )
+        )
+    ],
+    fluid=True  # Makes the container span full width
+)
 
 @callback(
     Output(component_id='dd1', component_property='options'),
