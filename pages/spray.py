@@ -133,6 +133,58 @@ a graph and table will also be shown right beside the table itself (same as the 
 ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+# layout = 
+# html.Div([ 
+    
+#         dcc.Dropdown(
+#                     id='dd1',
+#                     options=[],
+#                     placeholder="Select Parts....",
+#                 ),
+
+
+#         html.Div(
+#                     dcc.DatePickerRange(id='date_range')
+#                 ),
+
+#         dag.AgGrid(
+#                     id='grid',
+#                     rowData=result_overall.to_dict('records'),
+#                     dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
+#                     columnDefs=[{"field": i} for i in result_overall.columns],
+#                     selectedRows=[],
+#                     style={'height': '400px', 'width': '100%'}
+#                     ),
+#         dbc.Row(
+#             dbc.Col(
+#                 dcc.Graph(
+#                     id='pie',
+#                     figure=go.Figure()
+#                 ),
+#                 width=6,
+#                 className="mb-4"  # Add spacing below the chart
+#             ),
+#             justify="left"  # Center the chart
+#         ),
+
+#         dbc.Row(
+#             dbc.Col(
+#                 dash_table.DataTable(
+#                     id='defect_table',
+#                     data=[],
+#                     style_table={'width': '100%', 'overflowX': 'auto'},  # Responsive table
+#                 ),
+#                 width=12,
+#                 className="mb-4"
+#             )
+#         ),
+#         dcc.Interval(id = 'interval_spray', interval= 10 * 1000, n_intervals = 0)
+    
+    
+# ])
+
+
+
 layout = dbc.Container(
     [
         # Dropdown for part selection
@@ -200,7 +252,8 @@ layout = dbc.Container(
                 width=12,
                 className="mb-4"
             )
-        )
+        ),
+        dcc.Interval(id = 'interval_spray', interval= 10 * 1000, n_intervals = 0)
     ],
     fluid=True  # Makes the container span full width
 )
@@ -210,9 +263,10 @@ layout = dbc.Container(
     Output(component_id='grid', component_property='rowData'),
     Input(component_id='dd1', component_property='value'),
     Input(component_id='date_range', component_property='start_date'),
-    Input(component_id='date_range', component_property='end_date')
+    Input(component_id='date_range', component_property='end_date'),
+    Input(component_id='interval_spray', component_property='n_intervals')
 )
-def update_dropdown(dd1, start_date, end_date):
+def update_dropdown(dd1, start_date, end_date, n):
     # Fetch distinct part_codes from the database for the dropdown
     df = pd.read_sql('SELECT DISTINCT part_code FROM spray_batch_info', con=db_connection)
 
@@ -256,16 +310,16 @@ def update_dropdown(dd1, start_date, end_date):
     # Convert filtered table to dictionary format
     table_data = filtered_table.to_dict('records')
 
+
     return options, table_data
 
 @callback(
-    
-    
     Output(component_id= 'defect_table', component_property= 'data'),
     Output(component_id = 'pie', component_property = 'figure'),
-    Input(component_id='grid', component_property='selectedRows')
+    Input(component_id='grid', component_property='selectedRows'),
+    Input(component_id='interval_spray', component_property='n_intervals')
 )
-def show_chart(selected_rows):
+def show_chart(selected_rows, n):
     # Ensure there is at least one selected row
     if selected_rows:
         subplot_titles = ["Overall Reject", "100% Reject", "200% Reject"]
@@ -490,7 +544,7 @@ def show_chart(selected_rows):
 
 
     else:
-        print("No rows selected.")
+        # print("No rows selected.")
         empty_data = []
         empty_figure = go.Figure(data=[])
         return empty_data, empty_figure

@@ -176,7 +176,9 @@ layout = html.Div([
     html.Div(dash_table.DataTable(
         id='defect_table_print',
         data=[]
-    ))
+    )),
+
+    dcc.Interval(id = 'interval_print', interval= 10 * 1000, n_intervals = 0)
 
 ])
 
@@ -192,9 +194,10 @@ layout = html.Div([
     Output(component_id='grid_print', component_property='rowData'),
     Input(component_id='dd1_print', component_property='value'),
     Input(component_id='date_range_print', component_property='start_date'),
-    Input(component_id='date_range_print', component_property='end_date')
+    Input(component_id='date_range_print', component_property='end_date'),
+    Input(component_id='interval_print', component_property='n_intervals')
 )
-def update_dropdown(dd1_print, start_date, end_date):
+def update_dropdown(dd1_print, start_date, end_date, n):
     # Fetch distinct part_codes from the database for the dropdown
     df = pd.read_sql('SELECT DISTINCT part_code FROM print_batch_info', con=db_connection)
 
@@ -250,9 +253,10 @@ def update_dropdown(dd1_print, start_date, end_date):
 @callback(
     Output(component_id= 'defect_table_print', component_property= 'data'),
     Output(component_id = 'pie_print', component_property = 'figure'),
-    Input(component_id='grid_print', component_property='selectedRows')
+    Input(component_id='grid_print', component_property='selectedRows'),
+    Input(component_id='interval_print', component_property='n_intervals')
 )
-def show_chart(selected_rows):
+def show_chart(selected_rows,n):
     # Ensure there is at least one selected row
     if selected_rows:
         # Extract the first selected row
@@ -280,9 +284,9 @@ def show_chart(selected_rows):
 
         filtered_df_print = filtered_df_print[filtered_df_print['movement_reason'].notna()]
 
-        print("filtered_df_print")
-        print(filtered_df_print)
-        print("##-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+        # print("filtered_df_print")
+        # print(filtered_df_print)
+        # print("##-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
         
 
         
@@ -342,9 +346,9 @@ def show_chart(selected_rows):
         'part_code': 'first'    
         }).reset_index()
 
-        print("result_subclass")
-        print(result_subclass)
-        print("##-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+        # print("result_subclass")
+        # print(result_subclass)
+        # print("##-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
     
         result_overall_print['% Rejection'] = result_overall_print.apply(
@@ -466,7 +470,7 @@ def show_chart(selected_rows):
 
         table_data_print = non_zero_columns_data.to_dict("records")
 
-        print(table_data_print)
+        # print(table_data_print)
 
 
 
@@ -476,7 +480,7 @@ def show_chart(selected_rows):
 
 
     else:
-        print("No rows selected.")
+        # print("No rows selected.")
         # Ensure to return empty data and empty figure if no rows are selected
         empty_data = []
         empty_figure = go.Figure(data=[])
