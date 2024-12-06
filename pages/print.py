@@ -111,7 +111,6 @@ columns_of_interest = ['dust_mark','under_spray','scratches','dented','bubble', 
 
 defect_data = {col: {'Overall': 0, 'Process 1' : 0, 'Process 2' : 0, '100%': 0, '200%': 0} for col in columns_of_interest}
 
-result_overall_print_filtered = result_overall_print[result_overall_print['print_info_id'] == 86]
 
 # print(result_overall_print)
 
@@ -198,6 +197,91 @@ layout = html.Div([
     Input(component_id='interval_print', component_property='n_intervals')
 )
 def update_dropdown(dd1_print, start_date, end_date, n):
+
+    df_print = pd.read_sql('''
+    SELECT 
+                        print_batch_info.print_info_id, 
+                        print_batch_info.date_printed,
+                        print_batch_info.part_name,
+                        print_batch_info.part_code,
+                        SUM(print_defect_list.dust_mark) AS dust_mark,
+                        SUM(print_defect_list.under_spray) AS under_spray,
+                        SUM(print_defect_list.scratches) AS scratches,
+                        SUM(print_defect_list.dented) AS dented,
+                        SUM(print_defect_list.bubble) AS bubble,
+                        SUM(print_defect_list.dust_paint) AS dust_paint,
+                        SUM(print_defect_list.sink_mark) AS sink_mark,
+                        SUM(print_defect_list.white_dot) AS white_dot,
+                        SUM(print_defect_list.black_dot) AS black_dot,
+                        SUM(print_defect_list.smear) AS smear,
+                        SUM(print_defect_list.dirty) AS dirty,
+                        SUM(print_defect_list.bulging) AS bulging,
+                        SUM(print_defect_list.short_mould) AS short_mould,
+                        SUM(print_defect_list.weldline) AS weldline,
+                        SUM(print_defect_list.incompleted) AS incompleted,
+                        SUM(print_defect_list.colour_out) AS colour_out,
+                        SUM(print_defect_list.gate_high) AS gate_high,
+                        SUM(print_defect_list.over_stamp) AS over_stamp,
+                        SUM(print_defect_list.ink_mark) AS ink_mark,
+                        SUM(print_defect_list.banding) AS banding,
+                        SUM(print_defect_list.shining) AS shining,
+                        SUM(print_defect_list.overtrim) AS overtrim,
+                        SUM(print_defect_list.dprinting) AS dprinting,
+                        SUM(print_defect_list.dust_fibre) AS dust_fibre,
+                        SUM(print_defect_list.thiner_mark) AS thiner_mark,
+                        SUM(print_defect_list.adjustment) AS adjustment,
+                        SUM(print_defect_list.position_out) AS position_out,
+                        SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END) AS total_output,
+                        SUM(CASE WHEN history_print.movement_reason IN ('New print batch', '200', '100', 'Secondary process') THEN history_print.amount_reject ELSE 0 END) AS total_reject,
+                        CASE 
+                            WHEN SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END) > 0 
+                            THEN ROUND(
+                                (
+                                    SUM(CASE WHEN history_print.movement_reason IN ('New print batch', '200', '100', 'Secondary process') THEN history_print.amount_reject ELSE 0 END) / 
+                                    SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END)
+                                ) * 100, 2
+                            )
+                            ELSE 0 
+                        END AS rejection_percentage
+                    FROM 
+                        print_batch_info
+                    INNER JOIN 
+                        history_print ON print_batch_info.print_info_id = history_print.print_info_id
+                    INNER JOIN 
+                        print_defect_list ON print_defect_list.print_inspection_id = history_print.print_inspection_id
+                    GROUP BY 
+                        print_batch_info.print_info_id, 
+                        print_batch_info.date_printed
+''', con=db_connection)
+
+    # filtered_df_print = df_print[(df_print['movement_reason'] == '100') | (df_print['movement_reason'] == '200')| (df_print['movement_reason'] == 'Secondary process') | (df_print['movement_reason'] == 'New print batch') ]
+
+    result_overall_print = df_print.groupby('print_info_id').agg({
+        'total_reject': 'sum','dust_mark': 'sum', 'total_output': 'first', 'rejection_percentage': 'first',
+        'under_spray': 'sum','scratches': 'sum','dented': 'sum',
+        'bubble': 'sum', 'dust_paint': 'sum',
+        'sink_mark': 'sum','white_dot': 'sum',
+        'black_dot': 'sum','smear': 'sum',
+        'dirty': 'sum','bulging': 'sum',
+        'short_mould': 'sum','weldline': 'sum',
+        'incompleted': 'sum','colour_out': 'sum',
+        'gate_high': 'sum','over_stamp': 'sum',
+        'ink_mark': 'sum','banding': 'sum',
+        'shining': 'sum','overtrim': 'sum','dprinting': 'sum',
+        'dust_fibre': 'sum','thiner_mark': 'sum','adjustment': 'sum',
+        'position_out': 'sum',
+        'date_printed': 'first',
+        'part_name': 'first',  
+        'part_code': 'first'    
+    }).reset_index()
+
+    result_overall_print = result_overall_print[[
+        'print_info_id', 'part_name', 'part_code', 'date_printed', 'total_output', 'total_reject', 'rejection_percentage',
+        'dust_mark','under_spray','scratches','dented','bubble', 'dust_paint','sink_mark','white_dot','black_dot','smear',
+        'dirty','bulging','short_mould','weldline','incompleted','colour_out','gate_high','over_stamp','ink_mark','banding',
+        'shining','overtrim','dprinting','dust_fibre','thiner_mark','adjustment', 'position_out'
+    ]]
+
     # Fetch distinct part_codes from the database for the dropdown
     df = pd.read_sql('SELECT DISTINCT part_code FROM print_batch_info', con=db_connection)
 
@@ -257,6 +341,90 @@ def update_dropdown(dd1_print, start_date, end_date, n):
     Input(component_id='interval_print', component_property='n_intervals')
 )
 def show_chart(selected_rows,n):
+
+    df_print = pd.read_sql('''
+    SELECT 
+                        print_batch_info.print_info_id, 
+                        print_batch_info.date_printed,
+                        print_batch_info.part_name,
+                        print_batch_info.part_code,
+                        SUM(print_defect_list.dust_mark) AS dust_mark,
+                        SUM(print_defect_list.under_spray) AS under_spray,
+                        SUM(print_defect_list.scratches) AS scratches,
+                        SUM(print_defect_list.dented) AS dented,
+                        SUM(print_defect_list.bubble) AS bubble,
+                        SUM(print_defect_list.dust_paint) AS dust_paint,
+                        SUM(print_defect_list.sink_mark) AS sink_mark,
+                        SUM(print_defect_list.white_dot) AS white_dot,
+                        SUM(print_defect_list.black_dot) AS black_dot,
+                        SUM(print_defect_list.smear) AS smear,
+                        SUM(print_defect_list.dirty) AS dirty,
+                        SUM(print_defect_list.bulging) AS bulging,
+                        SUM(print_defect_list.short_mould) AS short_mould,
+                        SUM(print_defect_list.weldline) AS weldline,
+                        SUM(print_defect_list.incompleted) AS incompleted,
+                        SUM(print_defect_list.colour_out) AS colour_out,
+                        SUM(print_defect_list.gate_high) AS gate_high,
+                        SUM(print_defect_list.over_stamp) AS over_stamp,
+                        SUM(print_defect_list.ink_mark) AS ink_mark,
+                        SUM(print_defect_list.banding) AS banding,
+                        SUM(print_defect_list.shining) AS shining,
+                        SUM(print_defect_list.overtrim) AS overtrim,
+                        SUM(print_defect_list.dprinting) AS dprinting,
+                        SUM(print_defect_list.dust_fibre) AS dust_fibre,
+                        SUM(print_defect_list.thiner_mark) AS thiner_mark,
+                        SUM(print_defect_list.adjustment) AS adjustment,
+                        SUM(print_defect_list.position_out) AS position_out,
+                        SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END) AS total_output,
+                        SUM(CASE WHEN history_print.movement_reason IN ('New print batch', '200', '100', 'Secondary process') THEN history_print.amount_reject ELSE 0 END) AS total_reject,
+                        CASE 
+                            WHEN SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END) > 0 
+                            THEN ROUND(
+                                (
+                                    SUM(CASE WHEN history_print.movement_reason IN ('New print batch', '200', '100', 'Secondary process') THEN history_print.amount_reject ELSE 0 END) / 
+                                    SUM(CASE WHEN history_print.movement_reason = 'New print batch' or history_print.movement_reason = 'Secondary process' THEN history_print.amount_inspect ELSE 0 END)
+                                ) * 100, 2
+                            )
+                            ELSE 0 
+                        END AS rejection_percentage
+                    FROM 
+                        print_batch_info
+                    INNER JOIN 
+                        history_print ON print_batch_info.print_info_id = history_print.print_info_id
+                    INNER JOIN 
+                        print_defect_list ON print_defect_list.print_inspection_id = history_print.print_inspection_id
+                    GROUP BY 
+                        print_batch_info.print_info_id, 
+                        print_batch_info.date_printed
+''', con=db_connection)
+
+    # filtered_df_print = df_print[(df_print['movement_reason'] == '100') | (df_print['movement_reason'] == '200')| (df_print['movement_reason'] == 'Secondary process') | (df_print['movement_reason'] == 'New print batch') ]
+
+    result_overall_print = df_print.groupby('print_info_id').agg({
+        'total_reject': 'sum','dust_mark': 'sum', 'total_output': 'first', 'rejection_percentage': 'first',
+        'under_spray': 'sum','scratches': 'sum','dented': 'sum',
+        'bubble': 'sum', 'dust_paint': 'sum',
+        'sink_mark': 'sum','white_dot': 'sum',
+        'black_dot': 'sum','smear': 'sum',
+        'dirty': 'sum','bulging': 'sum',
+        'short_mould': 'sum','weldline': 'sum',
+        'incompleted': 'sum','colour_out': 'sum',
+        'gate_high': 'sum','over_stamp': 'sum',
+        'ink_mark': 'sum','banding': 'sum',
+        'shining': 'sum','overtrim': 'sum','dprinting': 'sum',
+        'dust_fibre': 'sum','thiner_mark': 'sum','adjustment': 'sum',
+        'position_out': 'sum',
+        'date_printed': 'first',
+        'part_name': 'first',  
+        'part_code': 'first'    
+    }).reset_index()
+
+    result_overall_print = result_overall_print[[
+        'print_info_id', 'part_name', 'part_code', 'date_printed', 'total_output', 'total_reject', 'rejection_percentage',
+        'dust_mark','under_spray','scratches','dented','bubble', 'dust_paint','sink_mark','white_dot','black_dot','smear',
+        'dirty','bulging','short_mould','weldline','incompleted','colour_out','gate_high','over_stamp','ink_mark','banding',
+        'shining','overtrim','dprinting','dust_fibre','thiner_mark','adjustment', 'position_out'
+    ]]
     # Ensure there is at least one selected row
     if selected_rows:
         # Extract the first selected row

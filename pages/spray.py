@@ -133,57 +133,6 @@ a graph and table will also be shown right beside the table itself (same as the 
 ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-# layout = 
-# html.Div([ 
-    
-#         dcc.Dropdown(
-#                     id='dd1',
-#                     options=[],
-#                     placeholder="Select Parts....",
-#                 ),
-
-
-#         html.Div(
-#                     dcc.DatePickerRange(id='date_range')
-#                 ),
-
-#         dag.AgGrid(
-#                     id='grid',
-#                     rowData=result_overall.to_dict('records'),
-#                     dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
-#                     columnDefs=[{"field": i} for i in result_overall.columns],
-#                     selectedRows=[],
-#                     style={'height': '400px', 'width': '100%'}
-#                     ),
-#         dbc.Row(
-#             dbc.Col(
-#                 dcc.Graph(
-#                     id='pie',
-#                     figure=go.Figure()
-#                 ),
-#                 width=6,
-#                 className="mb-4"  # Add spacing below the chart
-#             ),
-#             justify="left"  # Center the chart
-#         ),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 dash_table.DataTable(
-#                     id='defect_table',
-#                     data=[],
-#                     style_table={'width': '100%', 'overflowX': 'auto'},  # Responsive table
-#                 ),
-#                 width=12,
-#                 className="mb-4"
-#             )
-#         ),
-#         dcc.Interval(id = 'interval_spray', interval= 10 * 1000, n_intervals = 0)
-    
-    
-# ])
-
-
 
 layout = dbc.Container(
     [
@@ -267,6 +216,92 @@ layout = dbc.Container(
     Input(component_id='interval_spray', component_property='n_intervals')
 )
 def update_dropdown(dd1, start_date, end_date, n):
+
+    df = pd.read_sql('''
+    SELECT spray_batch_info.part_name, spray_batch_info.part_code , spray_batch_info.date_sprayed, spray_batch_info.spray_batch_id, spray_batch_info.total_output , history_spray.amount_reject, history_spray.movement_reason, spray_defect_list.*
+    FROM spray_batch_info
+    INNER JOIN history_spray 
+        ON spray_batch_info.spray_batch_id = history_spray.spray_batch_id
+    INNER JOIN spray_defect_list 
+        ON spray_defect_list.spray_inspection_id = history_spray.spray_inspection_id
+''', con=db_connection)
+    filtered_df = df[(df['movement_reason'] == '100') | (df['movement_reason'] == '200')| (df['movement_reason'] == 'print')]
+
+    result_overall = filtered_df.groupby('spray_batch_id').agg({
+        'amount_reject': 'sum','dust_mark': 'sum',
+        'fibre_mark': 'sum','paint_marks': 'sum','white_marks': 'sum',
+        'sink_marks': 'sum', 'texture_marks': 'sum',
+        'water_marks': 'sum','flow_marks': 'sum',
+        'black_dot': 'sum','white_dot': 'sum',
+        'over_paint': 'sum','under_spray': 'sum',
+        'colour_out': 'sum','masking_ng': 'sum',
+        'flying_paint': 'sum','weldline': 'sum',
+        'banding': 'sum','short_mould': 'sum',
+        'sliver_streak': 'sum','dented': 'sum',
+        'scratches': 'sum','dirty': 'sum','print_defects': 'sum',
+        "total_output": 'first',
+        'date_sprayed': 'first',
+        'part_name': 'first',  
+        'part_code': 'first'    
+    }).reset_index()
+
+    result_100_200 = filtered_df.groupby(['movement_reason', 'spray_batch_id']).agg({
+        'amount_reject': 'sum',
+        'dust_mark': 'sum',
+        'fibre_mark': 'sum',
+        'paint_marks': 'sum',
+        'white_marks': 'sum',
+        'sink_marks': 'sum',
+        'texture_marks': 'sum',
+        'water_marks': 'sum',
+        'flow_marks': 'sum',
+        'black_dot': 'sum',
+        'white_dot': 'sum',
+        'over_paint': 'sum',
+        'under_spray': 'sum',
+        'colour_out': 'sum',
+        'masking_ng': 'sum',
+        'flying_paint': 'sum',
+        'weldline': 'sum',
+        'banding': 'sum',
+        'short_mould': 'sum',
+        'sliver_streak': 'sum',
+        'dented': 'sum',
+        'scratches': 'sum',
+        'dirty': 'sum',
+        'print_defects': 'sum',
+        'total_output': 'first',
+        'date_sprayed': 'first',
+        'part_name': 'first',
+        'part_code': 'first'
+    }).reset_index()
+
+
+    result_overall['% Rejection'] = result_overall.apply(
+        lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+    )
+    result_100_200['% Rejection'] = result_100_200.apply(
+        lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+    )
+
+
+    result_overall = result_overall[[
+        'spray_batch_id', 'part_name', 'part_code', 'date_sprayed', 'total_output', 'amount_reject', '% Rejection',
+        'dust_mark', 'fibre_mark', 'paint_marks', 'white_marks', 'sink_marks', 
+        'texture_marks', 'water_marks', 'flow_marks', 'black_dot', 'white_dot', 
+        'over_paint', 'under_spray', 'colour_out', 'masking_ng', 'flying_paint', 
+        'weldline', 'banding', 'short_mould', 'sliver_streak', 'dented', 'scratches', 
+        'dirty', 'print_defects'
+    ]]
+
+    result_100_200 = result_100_200[[
+        'spray_batch_id', 'part_name', 'part_code', 'date_sprayed', 'movement_reason', 'total_output', 'amount_reject', '% Rejection',
+        'dust_mark', 'fibre_mark', 'paint_marks', 'white_marks', 'sink_marks', 
+        'texture_marks', 'water_marks', 'flow_marks', 'black_dot', 'white_dot', 
+        'over_paint', 'under_spray', 'colour_out', 'masking_ng', 'flying_paint', 
+        'weldline', 'banding', 'short_mould', 'sliver_streak', 'dented', 'scratches', 
+        'dirty', 'print_defects'
+    ]]
     # Fetch distinct part_codes from the database for the dropdown
     df = pd.read_sql('SELECT DISTINCT part_code FROM spray_batch_info', con=db_connection)
 

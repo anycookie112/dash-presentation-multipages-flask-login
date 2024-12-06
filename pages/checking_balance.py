@@ -58,89 +58,6 @@ WHERE secondary_process_balance != 0 OR hundered_balance != 0 ;
 
 dash.register_page(__name__)
 
-
-# layout = dbc.Container(
-#     [   
-#         dbc.Row(
-#             dbc.Col(
-#                 html.Div(
-#                     dcc.DatePickerRange(id="x"),  # Corrected ID here
-#                     className="d-flex justify-content-left"  # Center the DatePickerRange
-#                 ),
-#                 width=6,
-#                 className="mt-3 mb-3"
-#             )
-#         ),
-
-#         # dbc.Button("Clear Dates", id="y", className="mt-3"),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 dcc.Dropdown(
-#                     id='dd1_balance_spray',
-#                     options=[],
-#                     placeholder="Select Parts....",
-#                 ),
-#                 width=6,  # Center with a width of 6 out of 12
-#                 className="mt-3 mb-3"  # Add top and bottom margin
-#             )
-#         ),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 html.H3("Spray Balance", className="text-center mt-3 mb-3"),
-#                 width=12
-#             )
-#         ),
-#         dbc.Row(
-#             dbc.Col(
-#                 dag.AgGrid(
-#                     id='grid_balance',
-#                     rowData=df_spray.to_dict('records'),
-#                     columnDefs=[{"field": i} for i in df_spray.columns],
-#                     style={'height': '400px', 'width': '100%'}  # Adjust grid size
-#                 ),
-#                 width=12,  # Full width of the container
-#                 className="mb-4"  # Add margin-bottom for spacing
-#             )
-#         ),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 html.H3("Print Balance", className="text-center mt-3 mb-3"),
-#                 width=12
-#             )
-#         ),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 dcc.Dropdown(
-#                     id='dd1_balance_print',
-#                     options=[],
-#                     placeholder="Select Parts....",
-#                 ),
-#                 width=6,  # Center with a width of 6 out of 12
-#                 className="mt-3 mb-3"  # Add top and bottom margin
-#             )
-#         ),
-
-#         dbc.Row(
-#             dbc.Col(
-#                 dag.AgGrid(
-#                     id='grid_balance_print',
-#                     rowData=df_print.to_dict('records'),
-#                     columnDefs=[{"field": i} for i in df_print.columns],
-#                     style={'height': '400px', 'width': '100%'},  # Adjust grid size
-#                 ),
-#                 width=12,  # Full width of the container
-#                 className="mb-4"  # Add margin-bottom for spacing
-#             )
-#         ),
-#         dcc.Interval(id = 'interval_balance', interval= 1 * 1000, n_intervals = 0)
-#     ],
-#     fluid=True  # Makes the container fluid (spanning the full width of the viewport)
-# )
-
 layout = dbc.Container(
     [
         # Date picker
@@ -165,6 +82,17 @@ layout = dbc.Container(
                 ),
                 width=6,  # Center with a width of 6 out of 12
                 className="mt-3 mb-3"  # Add top and bottom margin
+            )
+        ),
+
+        dbc.Button("Refresh", 
+                   id= "refresh",
+                   color="primary", className="mt-3 mb-3"),
+
+        dbc.Row(
+            dbc.Col(
+                html.H3("Spray Balance", className="text-center mt-3 mb-3"),
+                width=12
             )
         ),
 
@@ -239,9 +167,30 @@ layout = dbc.Container(
     Input(component_id='dd1_balance_spray', component_property='value'),
     Input(component_id='x', component_property='start_date'),  
     Input(component_id='x', component_property='end_date'),
-    Input(component_id='interval_balance', component_property='n_intervals')
+    Input(component_id='interval_balance', component_property='n_intervals'),
+    Input(component_id = 'refresh', component_property = 'n_clicks')
 ) 
-def update_dropdown_balance(dd1_balance_spray, start_date, end_date,n):
+def update_dropdown_balance(dd1_balance_spray, start_date, end_date,n, clicks):
+
+    db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
+    db_connection = create_engine(db_connection_str)
+
+    df_spray = pd.read_sql("""
+    SELECT 
+        spray_batch_id AS 'Spray Batch ID', 
+        part_name AS 'Part Name', 
+        part_code AS 'Part Code', 
+        date_sprayed AS 'Date Sprayed',
+        total_output AS 'Total Output', 
+        unchecked_balance AS 'Unchecked Balance', 
+        hundered_balance AS '100 Balance', 
+        finished_goods_balance AS '200 Balance',
+        total_checked_100 AS 'Total Checked 100',
+        total_checked_200 AS 'Total Checked 200'                       
+
+    FROM production.spray_batch_info
+    WHERE unchecked_balance != 0 OR hundered_balance != 0 ;
+    """, con=db_connection)
 
     df = pd.read_sql('SELECT DISTINCT part_code FROM spray_batch_info WHERE unchecked_balance != 0 OR hundered_balance != 0 ', con=db_connection)
 
@@ -294,9 +243,28 @@ def update_dropdown_balance(dd1_balance_spray, start_date, end_date,n):
     Input(component_id='dd1_balance_print', component_property='value'),
     Input(component_id='x', component_property='start_date'),  # Corrected ID here
     Input(component_id='x', component_property='end_date'),    # Corrected ID here
-    Input(component_id='interval_balance', component_property='n_intervals')
+    Input(component_id='interval_balance', component_property='n_intervals'),
+    Input(component_id = 'refresh', component_property = 'n_clicks')
 )
-def update_dropdown_balance(dd1_balance_print, start_date, end_date,n):
+def update_dropdown_balance(dd1_balance_print, start_date, end_date,n, clicks):
+
+    df_print = pd.read_sql("""
+    SELECT 
+        print_info_id AS 'Print Batch ID', 
+        part_name AS 'Part Name', 
+        part_code AS 'Part Code', 
+        date_printed AS 'Date Printed',
+        total_output AS 'Total Output', 
+        secondary_process_balance AS 'P1/P2 Balance', 
+        hundered_balance AS '100/P3/P4 Balance', 
+        finished_good_balance AS '200 Balance',
+        total_checked_p1_p2 AS 'Total Checked P1/P2',
+        total_checked_p3_p4_100 AS 'Total Checked 100/P3/P4 Balance',
+        total_checked_200 AS 'Total Checked 200'
+                        
+    FROM production.print_batch_info
+    WHERE secondary_process_balance != 0 OR hundered_balance != 0 ;
+    """, con=db_connection)
 
     df = pd.read_sql('SELECT DISTINCT part_code FROM print_batch_info WHERE secondary_process_balance != 0 OR hundered_balance != 0 ', con=db_connection)
 
