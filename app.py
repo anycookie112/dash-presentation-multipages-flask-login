@@ -1,6 +1,5 @@
 import dash
 from dash import Dash, html, dcc, callback, Output, Input, dash_table
-from dash import Dash, html, dcc, dash_table
 import dash_bootstrap_components as dbc
 
 import plotly.express as px
@@ -12,8 +11,7 @@ from plotly.subplots import make_subplots
 
 import dash_ag_grid as dag
 import pandas as pd
-from sqlalchemy import create_engine
-from datetime import date
+
 
 app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -50,3 +48,23 @@ app.layout = html.Div([
 # Run the server
 if __name__ == "__main__":
     app.run_server(debug=True)
+
+
+"""
+do the thing by batch and lot?
+get the date range
+for batch
+get the unique id
+filter again to see if any of the batch is exceed 3 % reject
+
+for lot 
+just get the top 5 highest reject?
+or all the reject that exceeds a certain %
+
+
+probably need to do one for this week as well
+
+
+
+
+"""
