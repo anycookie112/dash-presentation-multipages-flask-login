@@ -1,22 +1,50 @@
 import dash
-from dash import Dash, html, dcc, callback, Output, Input, dash_table
+import os
 import dash_bootstrap_components as dbc
 
-import plotly.express as px
-import plotly.subplots as sp
+from dash import html, dcc
+from flask import Flask, session
+from flask_login import LoginManager, UserMixin
 
-import plotly.graph_objects as go
-from plotly.graph_objects import Figure
-from plotly.subplots import make_subplots
-
-import dash_ag_grid as dag
-import pandas as pd
+from datetime import timedelta
 
 
-app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = Flask(__name__)
+server.config.update(SECRET_KEY=os.getenv('SECRET_KEY'))
+server.config["SESSION_TYPE"] = "filesystem"
+server.config["SESSION_PERMANENT"] = False
 
-# Set the default page to the home page
+server.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(minutes=1)
+app = dash.Dash(__name__, server=server,
+                title='Example Dash login',
+                update_title='Loading...',
+                use_pages=True, 
+                external_stylesheets=[dbc.themes.BOOTSTRAP],
+                suppress_callback_exceptions=True)
+
+# Initialize Login Manager
+login_manager = LoginManager()
+login_manager.init_app(server)
+login_manager.login_view = "/"
+
+    
+class User(UserMixin):
+    def __init__(self, username, role="user"):  # Default role is "user"
+        self.id = username
+        self.role = role  # Add role attribute
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id:
+        role = session.get("role", "user")  # Default to "user" if missing
+        return User(user_id, role)
+    return None
+
+excluded_pages = {"/", "/logout", "/register"}  # Add any pages you want to exclude
+
 app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    dcc.Location(id='redirect', refresh=True),
 
     html.H1('Secondary Rejection %'),
 
@@ -33,8 +61,10 @@ app.layout = html.Div([
                         className="nav-link text-light",  # Apply Bootstrap styling
                     )
                 ) for page in dash.page_registry.values()
+                  if page["relative_path"] not in excluded_pages  # Exclude specified pages
+
             ],
-            brand="My App",  # Navbar brand
+            brand="Login",  # Navbar brand
             brand_href="/",  # Link to home page
             color="primary",  # Navbar color
             dark=True  # Dark mode styling for the navbar
@@ -45,26 +75,9 @@ app.layout = html.Div([
     dash.page_container
 ])
 
-# Run the server
+
+
+
+
 if __name__ == "__main__":
-    app.run_server(debug=True)
-
-
-"""
-do the thing by batch and lot?
-get the date range
-for batch
-get the unique id
-filter again to see if any of the batch is exceed 3 % reject
-
-for lot 
-just get the top 5 highest reject?
-or all the reject that exceeds a certain %
-
-
-probably need to do one for this week as well
-
-
-
-
-"""
+    app.run(debug=True)

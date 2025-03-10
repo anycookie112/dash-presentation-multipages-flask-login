@@ -74,6 +74,7 @@ dash.register_page(__name__, path='/register')
 form = dbc.Card(
     dbc.CardBody([
         html.H4("Register", className="text-center mb-4"),
+        html.H5("Admin can see your password, so just use a common password", className="text-center mb-4"),
         dbc.Row(
             [
                 dbc.Col(

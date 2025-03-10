@@ -13,10 +13,13 @@ import dash_ag_grid as dag
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import date
+from config.config import DB_CONFIG
 
+from flask_login import current_user
 
+db_connection_str = f"mysql+pymysql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
 
-db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
+# db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
 db_connection = create_engine(db_connection_str)
 
 df_spray = pd.read_sql("""
@@ -58,7 +61,23 @@ WHERE secondary_process_balance != 0 OR hundered_balance != 0 ;
 
 dash.register_page(__name__)
 
-layout = dbc.Container(
+def layout():
+    if not current_user.is_authenticated:
+        # Show a simple message (or redirect message)
+        return dbc.Container(
+            dbc.Alert(
+                [
+                    html.H4("Access Denied", className="alert-heading"),
+                    html.P("You must be logged in to view this page."),
+                    html.A("Login here", href="/", className="alert-link")
+                ],
+                color="danger",
+                className="text-center mt-5"
+            ),
+            className="vh-100 d-flex align-items-center justify-content-center"
+        )
+    return html.Div([
+        dbc.Container(
     [
         # Date picker
         dbc.Row(
@@ -159,6 +178,110 @@ layout = dbc.Container(
     ],
     fluid=True  # Makes the container span full width
 )
+    ])
+
+
+# layout = dbc.Container(
+#     [
+#         # Date picker
+#         dbc.Row(
+#             dbc.Col(
+#                 html.Div(
+#                     dcc.DatePickerRange(id='x'),
+#                     className="d-flex justify-content-left"  # Center the DatePickerRange
+#                 ),
+#                 width=6,
+#                 className="mt-3 mb-3"
+#             )
+#         ),
+        
+#         # Dropdown for part selection
+#         dbc.Row(
+#             dbc.Col(
+#                 dcc.Dropdown(
+#                     id='dd1_balance_spray',
+#                     options=[],
+#                     placeholder="Select Parts....",
+#                 ),
+#                 width=6,  # Center with a width of 6 out of 12
+#                 className="mt-3 mb-3"  # Add top and bottom margin
+#             )
+#         ),
+
+#         dbc.Button("Refresh", 
+#                    id= "refresh",
+#                    color="primary", className="mt-3 mb-3"),
+
+#         dbc.Row(
+#             dbc.Col(
+#                 html.H3("Spray Balance", className="text-center mt-3 mb-3"),
+#                 width=12
+#             )
+#         ),
+
+#         # AgGrid Table
+#         dbc.Row(
+#             dbc.Col(
+#                 dag.AgGrid(
+#                     id='grid_balance',
+#                     rowData=df_spray.to_dict('records'),
+#                     columnDefs=[{"field": i} for i in df_spray.columns],
+#                     style={'height': '400px', 'width': '100%'}
+#                 ),
+#                 width=12,
+#                 className="mb-4"
+#             )
+#         ),
+
+#         dbc.Row(
+#             dbc.Col(
+#                 html.H3("Print Balance", className="text-center mt-3 mb-3"),
+#                 width=12
+#             )
+#         ),
+
+#         # Defect data table
+#         dbc.Row(
+#             dbc.Col(
+#                 dcc.Dropdown(
+#                     id='dd1_balance_print',
+#                     options=[],
+#                     placeholder="Select Parts....",
+#                 ),
+#                 width=6,  # Center with a width of 6 out of 12
+#                 className="mt-3 mb-3"  # Add top and bottom margin
+#             )
+#         ),
+
+#         dbc.Row(
+#             dbc.Col(
+#                 dcc.Dropdown(
+#                     id='dd1_balance_print',
+#                     options=[],
+#                     placeholder="Select Parts....",
+#                 ),
+#                 width=6,  # Center with a width of 6 out of 12
+#                 className="mt-3 mb-3"  # Add top and bottom margin
+#             )
+#         ),
+
+#         dbc.Row(
+#             dbc.Col(
+#                 dag.AgGrid(
+#                     id='grid_balance_print',
+#                     rowData=df_print.to_dict('records'),
+#                     columnDefs=[{"field": i} for i in df_print.columns],
+#                     style={'height': '400px', 'width': '100%'},  # Adjust grid size
+#                 ),
+#                 width=12,  # Full width of the container
+#                 className="mb-4"  # Add margin-bottom for spacing
+#             )
+#         ),
+
+#         dcc.Interval(id = 'interval_balance', interval= 10 * 1000, n_intervals = 0)
+#     ],
+#     fluid=True  # Makes the container span full width
+# )
 
 # Corrected callback
 @callback(
@@ -172,7 +295,7 @@ layout = dbc.Container(
 ) 
 def update_dropdown_balance(dd1_balance_spray, start_date, end_date,n, clicks):
 
-    db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
+    db_connection_str = f"mysql+pymysql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
     db_connection = create_engine(db_connection_str)
 
     df_spray = pd.read_sql("""
@@ -233,7 +356,6 @@ def update_dropdown_balance(dd1_balance_spray, start_date, end_date,n, clicks):
 
     # Convert filtered table to dictionary format
     table_data = filtered_table.to_dict('records')
-    print("test")
 
     return options, table_data
 

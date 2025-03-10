@@ -12,7 +12,8 @@ import plotly.subplots as sp
 import plotly.graph_objects as go
 from plotly.graph_objects import Figure
 from plotly.subplots import make_subplots
-
+from config.config import DB_CONFIG
+from flask_login import current_user
 # Get today's date
 today = datetime.now()
 
@@ -23,13 +24,13 @@ start_of_this_week = today - timedelta(days=today.weekday())
 start_of_last_week = start_of_this_week - timedelta(days=7)
 end_of_last_week = start_of_this_week - timedelta(days=1)
 
-print("Start of Last Week:", start_of_last_week)
-print("End of Last Week:", end_of_last_week)
+# print("Start of Last Week:", start_of_last_week)
+# print("End of Last Week:", end_of_last_week)
 
 start_date_str = start_of_last_week.strftime('%Y-%m-%d %H:%M:%S')
 end_date_str = end_of_last_week.strftime('%Y-%m-%d %H:%M:%S')
 
-dash.register_page(__name__, path='/')
+dash.register_page(__name__, path='/home')
 
 """
 
@@ -45,7 +46,7 @@ the columns should be (moevement_date, movement_reason, total_checked, total_rej
 
 """
 
-db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
+db_connection_str = f"mysql+pymysql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
 db_connection = create_engine(db_connection_str)
 
 df = pd.read_sql(f'''
@@ -103,7 +104,7 @@ result_overall = result_overall[[
     ]]
 
 # Optional: Debugging step to verify column creation
-print(result_overall.head())  # Check if '% Rejection' is present
+# print(result_overall.head())  # Check if '% Rejection' is present
 
 # Clean the '% Rejection' column
 result_overall['% Rejection'] = result_overall['% Rejection'].str.replace('%', '', regex=False)  # Remove '%'
@@ -185,9 +186,22 @@ top_rejections_print = result_overall_print.nlargest(5, '% Rejection')
 
 
 
-
-
-layout =  dbc.Container(
+def layout():
+    if not current_user.is_authenticated:
+        # Show a simple message (or redirect message)
+        return dbc.Container(
+            dbc.Alert(
+                [
+                    html.H4("Access Denied", className="alert-heading"),
+                    html.P("You must be logged in to view this page."),
+                    html.A("Login here", href="/", className="alert-link")
+                ],
+                color="danger",
+                className="text-center mt-5"
+            ),
+            className="vh-100 d-flex align-items-center justify-content-center"
+        )
+    return ([dbc.Container(
     [dbc.Row(
             dbc.Col(
                 html.H3("Top 5 Rejects Lot of Last Week Spray (By Day)", className="text-center mt-3 mb-3"),
@@ -267,7 +281,8 @@ layout =  dbc.Container(
         ),
         dcc.Interval(id = 'interval_top5', interval= 10 * 1000, n_intervals = 0)],
     fluid=True  # Makes the container span full width
-)
+)])
+
 
 
 @callback(

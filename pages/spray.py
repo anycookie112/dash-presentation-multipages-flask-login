@@ -13,10 +13,13 @@ import dash_ag_grid as dag
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import date
+from config.config import DB_CONFIG
+from flask_login import current_user
+
 
 dash.register_page(__name__)
 
-db_connection_str = 'mysql+pymysql://admin:UL1131@192.168.1.17/production'
+db_connection_str = f"mysql+pymysql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
 db_connection = create_engine(db_connection_str)
 
 df = pd.read_sql('''
@@ -132,9 +135,22 @@ a graph and table will also be shown right beside the table itself (same as the 
 ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-
-layout = dbc.Container(
+def layout():
+    if not current_user.is_authenticated:
+        # Show a simple message (or redirect message)
+        return dbc.Container(
+            dbc.Alert(
+                [
+                    html.H4("Access Denied", className="alert-heading"),
+                    html.P("You must be logged in to view this page."),
+                    html.A("Login here", href="/", className="alert-link")
+                ],
+                color="danger",
+                className="text-center mt-5"
+            ),
+            className="vh-100 d-flex align-items-center justify-content-center"
+        )
+    return ([dbc.Container(
     [
         # Dropdown for part selection
         dbc.Row(
@@ -205,7 +221,8 @@ layout = dbc.Container(
         dcc.Interval(id = 'interval_spray', interval= 10 * 1000, n_intervals = 0)
     ],
     fluid=True  # Makes the container span full width
-)
+)])
+
 
 @callback(
     Output(component_id='dd1', component_property='options'),
