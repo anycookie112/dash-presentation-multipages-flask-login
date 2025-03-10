@@ -142,7 +142,7 @@ def check_user_timeout(n):
         last_active = session.get("last_active", datetime.datetime.utcnow())
 
         # Check if timeout exceeded
-        if (datetime.datetime.utcnow() - last_active).total_seconds() > 60:  # 30 min
+        if (datetime.datetime.utcnow() - last_active).total_seconds() > 18000:  # 30 min
             username = current_user.id  # Save username before logout
             time_out = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 

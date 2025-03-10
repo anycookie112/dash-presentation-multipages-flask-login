@@ -14,7 +14,7 @@ server.config.update(SECRET_KEY=os.getenv('SECRET_KEY'))
 server.config["SESSION_TYPE"] = "filesystem"
 server.config["SESSION_PERMANENT"] = False
 
-server.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(minutes=1)
+server.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(minutes=30)
 app = dash.Dash(__name__, server=server,
                 title='Example Dash login',
                 update_title='Loading...',
