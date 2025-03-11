@@ -8,7 +8,7 @@ from flask_login import logout_user, current_user
 from sqlalchemy import text
 from flask import session
 
-db_connection_str = f"mysql+pymysql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
+
 dash.register_page(__name__, path='/logout')
 
 layout = html.Div([

@@ -82,12 +82,14 @@ result_100_200 = filtered_df.groupby(['movement_reason', 'spray_batch_id']).agg(
 }).reset_index()
 
 
+# Store % rejection as a float
 result_overall['% Rejection'] = result_overall.apply(
-    lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+    lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
 )
 result_100_200['% Rejection'] = result_100_200.apply(
-    lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+    lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
 )
+
 
 
 result_overall = result_overall[[
@@ -179,19 +181,30 @@ def layout():
 
         # AgGrid Table
         dbc.Row(
-            dbc.Col(
-                dag.AgGrid(
-                    id='grid',
-                    rowData=result_overall.to_dict('records'),
-                    dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
-                    columnDefs=[{"field": i} for i in result_overall.columns],
-                    selectedRows=[],
-                    style={'height': '400px', 'width': '100%'}  # Adjust height and width
-                ),
-                width=12,
-                className="mb-4"
-            )
-        ),
+        dbc.Col(
+            dag.AgGrid(
+                id='grid',
+                rowData=result_overall.to_dict('records'),
+                dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
+                columnDefs=[
+                    {"field": i, "filter": "agTextColumnFilter"} if i != "% rejection" else
+                    {
+                        "field": i,
+                        "filter": "agNumberColumnFilter",
+                        "floatingFilter": True,
+                        "type": "numericColumn",
+                        "sortable": True,
+                        "valueFormatter": {"function": "params.value + '%' if params.value else ''"}  # Format as %
+                    }
+                    for i in result_overall.columns
+                ],
+                selectedRows=[],
+                style={'height': '400px', 'width': '100%'}  # Adjust height and width
+            ),
+            width=12,
+            className="mb-4"
+        )
+    ),
 
         # Pie chart
         dbc.Row(
@@ -307,12 +320,14 @@ def update_dropdown(dd1, start_date, end_date, n):
     }).reset_index()
 
 
+    # Store % rejection as a float
     result_overall['% Rejection'] = result_overall.apply(
-        lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+        lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
     )
     result_100_200['% Rejection'] = result_100_200.apply(
-        lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+        lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
     )
+
 
 
     result_overall = result_overall[[
@@ -469,12 +484,14 @@ def show_chart(selected_rows, n):
         }).reset_index()
 
 
-        result_overall_pie['% Rejection'] = result_overall_pie.apply(
-            lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+        # Store % rejection as a float
+        result_overall['% Rejection'] = result_overall.apply(
+            lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
         )
-        result_100_200_pie['% Rejection'] = result_100_200_pie.apply(
-            lambda row: f"{((row['amount_reject'] / row['total_output']) * 100):.2f}%", axis=1
+        result_100_200['% Rejection'] = result_100_200.apply(
+            lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
         )
+
 
         result_overall_pie = result_overall_pie[[
             'spray_batch_id', 'part_name', 'part_code', 'date_sprayed', 'total_output', 'amount_reject', '% Rejection',

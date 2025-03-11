@@ -180,12 +180,19 @@ def layout():
 
     # AgGrid
     html.Div(dag.AgGrid(
-        id='grid_print',
-        rowData=result_overall_print.to_dict('records'),
-        dashGridOptions={'rowSelection': 'single', 'defaultSelected': [0]},
-        columnDefs=[{"field": i} for i in result_overall_print.columns],
-        selectedRows=[],
-    )),
+    id='grid_print',
+    rowData=result_overall_print.to_dict('records'),
+    dashGridOptions={
+        'rowSelection': 'single',
+        'defaultSelected': [0],
+    },
+    columnDefs=[
+        {"field": i, "filter": "agTextColumnFilter"} if i != "% rejection" else
+        {"field": i, "filter": "agNumberColumnFilter", "floatingFilter": True}
+        for i in result_overall_print.columns
+    ],
+    selectedRows=[],
+)),
 
     # Pie chart
     html.Div(dcc.Graph(
