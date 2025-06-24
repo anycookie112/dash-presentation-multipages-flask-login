@@ -161,6 +161,7 @@ def layout():
                     id='dd1',
                     options=[],
                     placeholder="Select Parts....",
+                    multi= True
                 ),
                 width=6,  # Center with a width of 6 out of 12
                 className="mt-3 mb-3"  # Add top and bottom margin
@@ -319,15 +320,20 @@ def update_dropdown(dd1, start_date, end_date, n):
         'part_code': 'first'
     }).reset_index()
 
-
+    # print("Result Overall Columns: ", result_overall.head())
     # Store % rejection as a float
     result_overall['% Rejection'] = result_overall.apply(
         lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
     )
+
+
     result_100_200['% Rejection'] = result_100_200.apply(
         lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
     )
 
+
+    # print("Result Overall Columns: ", result_overall.head())
+    # print("Result 100_200 Columns: ", result_100_200.head())
 
 
     result_overall = result_overall[[
@@ -359,7 +365,9 @@ def update_dropdown(dd1, start_date, end_date, n):
         filtered_result_overall = result_overall.copy()  # Start with all data
     else:
         # Filter by the selected part_code
-        filtered_result_overall = result_overall[result_overall['part_code'] == dd1].copy()
+        # filtered_result_overall = result_overall[result_overall['part_code'] == dd1].copy()
+        filtered_result_overall = result_overall[result_overall['part_code'].isin(dd1)].copy()
+        # filtered_df = df[df['Age'].isin([25, 45])]
 
     # Ensure 'date_sprayed' is in datetime format and handle invalid values
     filtered_result_overall['date_sprayed'] = pd.to_datetime(
@@ -483,14 +491,18 @@ def show_chart(selected_rows, n):
             'part_code': 'first'
         }).reset_index()
 
+        print("Result Overall Pie Columns: ", result_overall_pie.head())
 
         # Store % rejection as a float
-        result_overall['% Rejection'] = result_overall.apply(
+        result_overall_pie['% Rejection'] = result_overall_pie.apply(
             lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
         )
-        result_100_200['% Rejection'] = result_100_200.apply(
+        result_100_200_pie['% Rejection'] = result_100_200_pie.apply(
             lambda row: round((row['amount_reject'] / row['total_output']) * 100, 2), axis=1
         )
+
+        # print("Result Overall Pie Columns: ", result_overall_pie.head())
+        # print("Result 100_200 Pie Columns: ", result_100_200_pie.head())
 
 
         result_overall_pie = result_overall_pie[[
@@ -510,9 +522,6 @@ def show_chart(selected_rows, n):
             'weldline', 'banding', 'short_mould', 'sliver_streak', 'dented', 'scratches', 
             'dirty', 'print_defects'
         ]]
-
-        # print(result_overall_pie)
-        # print(result_100_200_pie)
 
         # Select the columns of interest
         columns_of_interest = [

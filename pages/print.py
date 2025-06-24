@@ -173,7 +173,8 @@ def layout():
         dcc.Dropdown(
             id='dd1_print',
             options=[],
-            placeholder="Select Parts...."
+            placeholder="Select Parts....",
+            multi= True
         ),
         dcc.DatePickerRange(id='date_range_print')
     ]),  # Example of styling layout
@@ -323,7 +324,8 @@ def update_dropdown(dd1_print, start_date, end_date, n):
         filtered_result_overall = result_overall_print.copy()  # Start with all data
     else:
         # Filter by the selected part_code
-        filtered_result_overall = result_overall_print[result_overall_print['part_code'] == dd1_print].copy()
+        # filtered_result_overall = result_overall_print[result_overall_print['part_code'] == dd1_print].copy()
+        filtered_result_overall = result_overall_print[result_overall_print['part_code'].isin(dd1_print)].copy()
 
     # Ensure 'date_printed' is in datetime format and handle invalid values
     filtered_result_overall['date_printed'] = pd.to_datetime(
