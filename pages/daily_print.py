@@ -169,13 +169,30 @@ def filter_print_data(print_info_id=None, date_start=None, date_end=None):
 
 def sunburt_chart(chart_data):
     # Step 1: Melt defect columns into rows
-    defect_cols = [
-        'dust_mark', 'under_spray', 'scratches', 'dented', 'bubble',
-        'smear', 'dirty', 'bulging', 'short_mould', 'weldline', 'incompleted',
-        'colour_out', 'gate_high', 'over_stamp', 'ink_mark', 'banding',
-        'shining', 'overtrim', 'dprinting', 'dust_fibre', 'thiner_mark',
-        'adjustment', 'position_out', 'parting_line'
-    ]
+    # defect_cols = [
+    #     'dust_mark', 'under_spray', 'scratches', 'dented', 'bubble',
+    #     'smear', 'dirty', 'bulging', 'short_mould', 'weldline', 'incompleted',
+    #     'colour_out', 'gate_high', 'over_stamp', 'ink_mark', 'banding',
+    #     'shining', 'overtrim', 'dprinting', 'dust_fibre', 'thiner_mark',
+    #     'adjustment', 'position_out', 'parting_line'
+    # ]
+
+    # print("Chart data columns:", chart_data.columns.tolist())
+
+    # df_melted = chart_data.melt(
+    #     id_vars=['movement_reason', 'checker_name'],
+    #     value_vars=defect_cols,
+    #     var_name='defect_type',
+    #     value_name='count'
+    # )
+
+    # # Step 2: Filter out 0-counts
+    # df_melted = df_melted[df_melted['count'] > 0]
+
+    non_defect_cols = ['print_info_id', 'movement_reason', 'checker_name', 'amount_inspect', 'amount_reject']
+    
+    # Dynamically infer defect columns
+    defect_cols = [col for col in chart_data.columns if col not in non_defect_cols]
 
     df_melted = chart_data.melt(
         id_vars=['movement_reason', 'checker_name'],
@@ -183,9 +200,10 @@ def sunburt_chart(chart_data):
         var_name='defect_type',
         value_name='count'
     )
-
-    # Step 2: Filter out 0-counts
     df_melted = df_melted[df_melted['count'] > 0]
+
+    # ...rest of sunburst chart code...
+
 
     # Step 3: Plot sunburst chart
     fig = px.sunburst(
@@ -206,9 +224,11 @@ def sunburt_chart(chart_data):
 grouped = fetch_data_print()
 grouped_df = grouped.first().reset_index() 
 df = filter_print_data()
-df_chart, df_table = overall_data(641)
+df_chart, df_table = overall_data(880)
+sunburt_chart(df_chart)
+
 unique_part_codes = get_part_codes()
-# print(df)
+print(df)
 
 
 
@@ -405,5 +425,5 @@ def get_lot_data(rowdata, date_start, date_end):
 # if __name__ == "__main__":
 #     app.run_server(debug=True)
 
-
+# print(overall_data(880))
 
